@@ -11,8 +11,19 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
+    /** @use HasFactory<UserFactory| */
     use HasFactory, Notifiable, HasApiTokens;
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($user) {
+            if (empty($user->reference)) {
+                $user->reference = (string) \Illuminate\Support\Str::uuid();
+            }
+        });
+    }
 
     /**
      * The attributes that are mass assignable.
@@ -24,6 +35,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'reference',
     ];
 
     /**

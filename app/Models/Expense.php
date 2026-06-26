@@ -10,6 +10,17 @@ class Expense extends Model
 {
     use HasFactory;
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($expense) {
+            if (empty($expense->reference)) {
+                $expense->reference = (string) \Illuminate\Support\Str::uuid();
+            }
+        });
+    }
+
     protected $fillable = [
         'user_id',
         'title',
@@ -22,6 +33,7 @@ class Expense extends Model
         'payment_reference',
         'paid_at',
         'expense_date',
+        'reference',
     ];
 
     protected $casts = [
