@@ -45,9 +45,9 @@ class ExpenseService
         ];
     }
 
-    public function updateExpense(int $expenseId, array $data, int $userId): array
+    public function updateExpense(string $expenseReference, array $data, int $userId): array
     {
-        $expense = $this->expenseRepository->findById($expenseId);
+        $expense = $this->expenseRepository->findByReference($expenseReference);
         
         if (!$expense) {
             throw new \InvalidArgumentException('Expense not found');
@@ -63,7 +63,7 @@ class ExpenseService
 
         $this->validateExpenseData($data, true);
 
-        $updatedExpense = $this->expenseRepository->update($expenseId, $data);
+        $updatedExpense = $this->expenseRepository->updateByReference($expenseReference, $data);
 
         return [
             'expense' => $updatedExpense->load('user'),
@@ -71,9 +71,9 @@ class ExpenseService
         ];
     }
 
-    public function cancelExpense(int $expenseId, int $userId): array
+    public function cancelExpense(string $expenseReference, int $userId): array
     {
-        $expense = $this->expenseRepository->findById($expenseId);
+        $expense = $this->expenseRepository->findByReference($expenseReference);
         
         if (!$expense) {
             throw new \InvalidArgumentException('Expense not found');
@@ -87,7 +87,7 @@ class ExpenseService
             throw new \InvalidArgumentException('Cannot cancel expense with status: ' . $expense->status);
         }
 
-        $updatedExpense = $this->expenseRepository->update($expenseId, [
+        $updatedExpense = $this->expenseRepository->updateByReference($expenseReference, [
             'status' => 'CANCELLED',
         ]);
 
@@ -97,9 +97,9 @@ class ExpenseService
         ];
     }
 
-    public function approveExpense(int $expenseId): array
+    public function approveExpense(string $expenseReference): array
     {
-        $expense = $this->expenseRepository->findById($expenseId);
+        $expense = $this->expenseRepository->findByReference($expenseReference);
         
         if (!$expense) {
             throw new \InvalidArgumentException('Expense not found');
@@ -109,7 +109,7 @@ class ExpenseService
             throw new \InvalidArgumentException('Cannot approve expense with status: ' . $expense->status);
         }
 
-        $updatedExpense = $this->expenseRepository->update($expenseId, [
+        $updatedExpense = $this->expenseRepository->updateByReference($expenseReference, [
             'status' => 'APPROVED',
         ]);
 
@@ -119,9 +119,9 @@ class ExpenseService
         ];
     }
 
-    public function rejectExpense(int $expenseId, string $reason): array
+    public function rejectExpense(string $expenseReference, string $reason): array
     {
-        $expense = $this->expenseRepository->findById($expenseId);
+        $expense = $this->expenseRepository->findByReference($expenseReference);
         
         if (!$expense) {
             throw new \InvalidArgumentException('Expense not found');
@@ -135,7 +135,7 @@ class ExpenseService
             throw new \InvalidArgumentException('Rejection reason is required');
         }
 
-        $updatedExpense = $this->expenseRepository->update($expenseId, [
+        $updatedExpense = $this->expenseRepository->updateByReference($expenseReference, [
             'status' => 'REJECTED',
             'rejection_reason' => $reason,
         ]);
@@ -146,9 +146,9 @@ class ExpenseService
         ];
     }
 
-    public function markAsPaid(int $expenseId, array $paymentData): array
+    public function markAsPaid(string $expenseReference, array $paymentData): array
     {
-        $expense = $this->expenseRepository->findById($expenseId);
+        $expense = $this->expenseRepository->findByReference($expenseReference);
         
         if (!$expense) {
             throw new \InvalidArgumentException('Expense not found');
@@ -160,7 +160,7 @@ class ExpenseService
 
         $this->validatePaymentData($paymentData);
 
-        $updatedExpense = $this->expenseRepository->update($expenseId, [
+        $updatedExpense = $this->expenseRepository->updateByReference($expenseReference, [
             'status' => 'PAID',
             'payment_method' => $paymentData['payment_method'],
             'payment_reference' => $paymentData['reference'] ?? null,
@@ -194,9 +194,9 @@ class ExpenseService
         ];
     }
 
-    public function getExpenseById(int $expenseId): array
+    public function getExpenseById(string $expenseReference): array
     {
-        $expense = $this->expenseRepository->findById($expenseId);
+        $expense = $this->expenseRepository->findByReference($expenseReference);
         
         if (!$expense) {
             throw new \InvalidArgumentException('Expense not found');
