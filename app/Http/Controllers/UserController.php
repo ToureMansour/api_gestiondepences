@@ -3,16 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Interfaces\UserRepositoryInterface;
+use App\Services\LoggingService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class UserController extends Controller
 {
     protected UserRepositoryInterface $userRepository;
+    protected LoggingService $loggingService;
 
-    public function __construct(UserRepositoryInterface $userRepository)
+    public function __construct(UserRepositoryInterface $userRepository, LoggingService $loggingService)
     {
         $this->userRepository = $userRepository;
+        $this->loggingService = $loggingService;
         $this->middleware('auth:sanctum');
         $this->middleware('role:admin')->except(['profile', 'updateProfile']);
     }
@@ -36,24 +39,27 @@ class UserController extends Controller
         }
     }
 
-    public function show(int $id): JsonResponse
+    public function show(string $userReference): JsonResponse
     {
         try {
-            $user = $this->userRepository->findById($id);
+            $user = $this->userRepository->findByReference($userReference);
 
             if (!$user) {
+                $this->loggingService->logWarning('User not found', ['reference' => $userReference]);
                 return response()->json([
                     'success' => false,
                     'message' => 'User not found'
                 ], 404);
             }
 
+            $this->loggingService->logAction('view', 'user', $userReference, $user->id);
             return response()->json([
                 'success' => true,
                 'message' => 'User retrieved successfully',
                 'data' => $user
             ]);
         } catch (\Exception $e) {
+            $this->loggingService->logException($e, 'UserController@show');
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve user',
@@ -81,15 +87,11 @@ class UserController extends Controller
         }
     }
 
-    public function updateProfile(Request $request): JsonResponse
+    public function updateProfile(\App\Http\Requests\UpdateProfileRequest $request): JsonResponse
     {
-        $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'email' => 'sometimes|required|email|unique:users,email,' . auth()->id(),
-        ]);
-
         try {
             $user = $this->userRepository->update(auth()->id(), $request->all());
+            $this->loggingService->logAction('update_profile', 'user', $user->reference, $user->id);
 
             return response()->json([
                 'success' => true,
@@ -97,6 +99,7 @@ class UserController extends Controller
                 'data' => $user
             ]);
         } catch (\Exception $e) {
+            $this->loggingService->logException($e, 'UserController@updateProfile');
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update profile',

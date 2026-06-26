@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\AuthService;
+use App\Services\LoggingService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
@@ -10,10 +11,12 @@ use Illuminate\Support\Facades\Validator;
 class AuthController extends Controller
 {
     protected AuthService $authService;
+    protected LoggingService $loggingService;
 
-    public function __construct(AuthService $authService)
+    public function __construct(AuthService $authService, LoggingService $loggingService)
     {
         $this->authService = $authService;
+        $this->loggingService = $loggingService;
     }
 
     public function register(Request $request): JsonResponse
@@ -26,6 +29,7 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
+            $this->loggingService->logValidationError('/api/register', $validator->errors()->toArray());
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
@@ -35,6 +39,7 @@ class AuthController extends Controller
 
         try {
             $result = $this->authService->register($request->all());
+            $this->loggingService->logAction('register', 'user', $result['user']->reference, $result['user']->id);
 
             return response()->json([
                 'success' => true,
@@ -42,6 +47,7 @@ class AuthController extends Controller
                 'data' => $result
             ], 201);
         } catch (\Exception $e) {
+            $this->loggingService->logException($e, 'AuthController@register');
             return response()->json([
                 'success' => false,
                 'message' => 'Registration failed',
@@ -58,6 +64,7 @@ class AuthController extends Controller
         ]);
 
         if ($validator->fails()) {
+            $this->loggingService->logValidationError('/api/login', $validator->errors()->toArray());
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
@@ -67,6 +74,8 @@ class AuthController extends Controller
 
         try {
             $result = $this->authService->login($request->only('email', 'password'));
+            $this->loggingService->logAuthAttempt($request->email, true, request()->ip());
+            $this->loggingService->logAction('login', 'user', $result['user']->reference, $result['user']->id);
 
             return response()->json([
                 'success' => true,
@@ -74,11 +83,13 @@ class AuthController extends Controller
                 'data' => $result
             ]);
         } catch (\InvalidArgumentException $e) {
+            $this->loggingService->logAuthAttempt($request->email, false, request()->ip());
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid credentials'
             ], 401);
         } catch (\Exception $e) {
+            $this->loggingService->logException($e, 'AuthController@login');
             return response()->json([
                 'success' => false,
                 'message' => 'Login failed',
@@ -90,13 +101,17 @@ class AuthController extends Controller
     public function logout(): JsonResponse
     {
         try {
+            $userReference = auth()->user()->reference;
+            $userId = auth()->id();
             $this->authService->logout();
+            $this->loggingService->logAction('logout', 'user', $userReference, $userId);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Logout successful'
             ]);
         } catch (\Exception $e) {
+            $this->loggingService->logException($e, 'AuthController@logout');
             return response()->json([
                 'success' => false,
                 'message' => 'Logout failed',

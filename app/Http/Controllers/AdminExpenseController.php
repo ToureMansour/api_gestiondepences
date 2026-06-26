@@ -3,24 +3,28 @@
 namespace App\Http\Controllers;
 
 use App\Services\ExpenseService;
+use App\Services\LoggingService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class AdminExpenseController extends Controller
 {
     protected ExpenseService $expenseService;
+    protected LoggingService $loggingService;
 
-    public function __construct(ExpenseService $expenseService)
+    public function __construct(ExpenseService $expenseService, LoggingService $loggingService)
     {
         $this->expenseService = $expenseService;
+        $this->loggingService = $loggingService;
         $this->middleware('auth:sanctum');
         $this->middleware('role:admin');
     }
 
-    public function approve(int $id): JsonResponse
+    public function approve(string $expenseReference): JsonResponse
     {
         try {
-            $result = $this->expenseService->approveExpense($id);
+            $result = $this->expenseService->approveExpense($expenseReference);
+            $this->loggingService->logAction('approve', 'expense', $expenseReference, auth()->id());
 
             return response()->json([
                 'success' => true,
@@ -28,11 +32,13 @@ class AdminExpenseController extends Controller
                 'data' => $result['expense']
             ]);
         } catch (\InvalidArgumentException $e) {
+            $this->loggingService->logValidationError('/api/expenses/' . $expenseReference . '/approve', ['message' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
             ], 422);
         } catch (\Exception $e) {
+            $this->loggingService->logException($e, 'AdminExpenseController@approve');
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to approve expense',
@@ -41,14 +47,15 @@ class AdminExpenseController extends Controller
         }
     }
 
-    public function reject(Request $request, int $id): JsonResponse
+    public function reject(Request $request, string $expenseReference): JsonResponse
     {
         $request->validate([
             'reason' => 'required|string|max:500',
         ]);
 
         try {
-            $result = $this->expenseService->rejectExpense($id, $request->reason);
+            $result = $this->expenseService->rejectExpense($expenseReference, $request->reason);
+            $this->loggingService->logAction('reject', 'expense', $expenseReference, auth()->id(), ['reason' => $request->reason]);
 
             return response()->json([
                 'success' => true,
@@ -56,11 +63,13 @@ class AdminExpenseController extends Controller
                 'data' => $result['expense']
             ]);
         } catch (\InvalidArgumentException $e) {
+            $this->loggingService->logValidationError('/api/expenses/' . $expenseReference . '/reject', ['message' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
             ], 422);
         } catch (\Exception $e) {
+            $this->loggingService->logException($e, 'AdminExpenseController@reject');
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to reject expense',
@@ -69,7 +78,7 @@ class AdminExpenseController extends Controller
         }
     }
 
-    public function pay(Request $request, int $id): JsonResponse
+    public function pay(Request $request, string $expenseReference): JsonResponse
     {
         $request->validate([
             'payment_method' => 'required|in:cash,mobile_money,transfer',
@@ -78,7 +87,8 @@ class AdminExpenseController extends Controller
         ]);
 
         try {
-            $result = $this->expenseService->markAsPaid($id, $request->all());
+            $result = $this->expenseService->markAsPaid($expenseReference, $request->all());
+            $this->loggingService->logAction('pay', 'expense', $expenseReference, auth()->id(), ['payment_method' => $request->payment_method]);
 
             return response()->json([
                 'success' => true,
@@ -86,11 +96,13 @@ class AdminExpenseController extends Controller
                 'data' => $result['expense']
             ]);
         } catch (\InvalidArgumentException $e) {
+            $this->loggingService->logValidationError('/api/expenses/' . $expenseReference . '/pay', ['message' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
             ], 422);
         } catch (\Exception $e) {
+            $this->loggingService->logException($e, 'AdminExpenseController@pay');
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to mark expense as paid',

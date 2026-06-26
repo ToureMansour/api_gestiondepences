@@ -3,16 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Services\ExpenseService;
+use App\Services\LoggingService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class ExpenseController extends Controller
 {
     protected ExpenseService $expenseService;
+    protected LoggingService $loggingService;
 
-    public function __construct(ExpenseService $expenseService)
+    public function __construct(ExpenseService $expenseService, LoggingService $loggingService)
     {
         $this->expenseService = $expenseService;
+        $this->loggingService = $loggingService;
         $this->middleware('auth:sanctum');
     }
 
@@ -50,22 +53,15 @@ class ExpenseController extends Controller
         }
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(\App\Http\Requests\CreateExpenseRequest $request): JsonResponse
     {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'amount' => 'required|numeric|min:0.01',
-            'description' => 'nullable|string',
-            'expense_date' => 'required|date',
-            'proof' => 'required|image|mimes:jpeg,png,jpg,pdf|max:2048',
-        ]);
-
         try {
             $result = $this->expenseService->createExpense(
                 $request->except('proof'),
                 $request->file('proof'),
                 auth()->id()
             );
+            $this->loggingService->logAction('create', 'expense', $result['expense']->reference, auth()->id());
 
             return response()->json([
                 'success' => true,
@@ -73,11 +69,13 @@ class ExpenseController extends Controller
                 'data' => $result['expense']
             ], 201);
         } catch (\InvalidArgumentException $e) {
+            $this->loggingService->logValidationError('/api/expenses', ['message' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
             ], 422);
         } catch (\Exception $e) {
+            $this->loggingService->logException($e, 'ExpenseController@store');
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create expense',
@@ -86,29 +84,33 @@ class ExpenseController extends Controller
         }
     }
 
-    public function show(int $id): JsonResponse
+    public function show(string $expenseReference): JsonResponse
     {
         try {
-            $result = $this->expenseService->getExpenseById($id);
+            $result = $this->expenseService->getExpenseById($expenseReference);
 
             if (auth()->user()->isEmployee() && $result['expense']->user_id !== auth()->id()) {
+                $this->loggingService->logWarning('Unauthorized access attempt', ['expense_reference' => $expenseReference, 'user_id' => auth()->id()]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized'
                 ], 403);
             }
 
+            $this->loggingService->logAction('view', 'expense', $expenseReference, auth()->id());
             return response()->json([
                 'success' => true,
                 'message' => $result['message'],
                 'data' => $result['expense']
             ]);
         } catch (\InvalidArgumentException $e) {
+            $this->loggingService->logWarning('Expense not found', ['expense_reference' => $expenseReference]);
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
             ], 404);
         } catch (\Exception $e) {
+            $this->loggingService->logException($e, 'ExpenseController@show');
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retrieve expense',
@@ -117,21 +119,15 @@ class ExpenseController extends Controller
         }
     }
 
-    public function update(Request $request, int $id): JsonResponse
+    public function update(\App\Http\Requests\UpdateExpenseRequest $request, string $expenseReference): JsonResponse
     {
-        $request->validate([
-            'title' => 'sometimes|required|string|max:255',
-            'amount' => 'sometimes|required|numeric|min:0.01',
-            'description' => 'nullable|string',
-            'expense_date' => 'sometimes|required|date',
-        ]);
-
         try {
             $result = $this->expenseService->updateExpense(
-                $id,
+                $expenseReference,
                 $request->all(),
                 auth()->id()
             );
+            $this->loggingService->logAction('update', 'expense', $expenseReference, auth()->id());
 
             return response()->json([
                 'success' => true,
@@ -139,11 +135,13 @@ class ExpenseController extends Controller
                 'data' => $result['expense']
             ]);
         } catch (\InvalidArgumentException $e) {
+            $this->loggingService->logValidationError('/api/expenses/' . $expenseReference, ['message' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
             ], 422);
         } catch (\Exception $e) {
+            $this->loggingService->logException($e, 'ExpenseController@update');
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update expense',
@@ -152,10 +150,11 @@ class ExpenseController extends Controller
         }
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(string $expenseReference): JsonResponse
     {
         try {
-            $result = $this->expenseService->cancelExpense($id, auth()->id());
+            $result = $this->expenseService->cancelExpense($expenseReference, auth()->id());
+            $this->loggingService->logAction('cancel', 'expense', $expenseReference, auth()->id());
 
             return response()->json([
                 'success' => true,
@@ -163,11 +162,13 @@ class ExpenseController extends Controller
                 'data' => $result['expense']
             ]);
         } catch (\InvalidArgumentException $e) {
+            $this->loggingService->logValidationError('/api/expenses/' . $expenseReference, ['message' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
             ], 422);
         } catch (\Exception $e) {
+            $this->loggingService->logException($e, 'ExpenseController@destroy');
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to cancel expense',
