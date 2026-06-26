@@ -21,6 +21,11 @@ class UserRepository implements UserRepositoryInterface
         return $this->model->find($id);
     }
 
+    public function findByReference(string $reference): ?User
+    {
+        return $this->model->where('reference', $reference)->first();
+    }
+
     public function findByEmail(string $email): ?User
     {
         return $this->model->where('email', $email)->first();
@@ -38,9 +43,25 @@ class UserRepository implements UserRepositoryInterface
         return $user;
     }
 
+    public function updateByReference(string $reference, array $data): User
+    {
+        $user = $this->findByReference($reference);
+        $user->update($data);
+        return $user;
+    }
+
     public function delete(int $id): bool
     {
         return $this->model->destroy($id) > 0;
+    }
+
+    public function deleteByReference(string $reference): bool
+    {
+        $user = $this->findByReference($reference);
+        if (!$user) {
+            return false;
+        }
+        return $this->model->destroy($user->id) > 0;
     }
 
     public function getAllPaginated(int $perPage = 10): LengthAwarePaginator

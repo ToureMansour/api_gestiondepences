@@ -22,6 +22,11 @@ class ExpenseRepository implements ExpenseRepositoryInterface
         return $this->model->with('user')->find($id);
     }
 
+    public function findByReference(string $reference): ?Expense
+    {
+        return $this->model->with('user')->where('reference', $reference)->first();
+    }
+
     public function create(array $data): Expense
     {
         return $this->model->create($data);
@@ -34,9 +39,25 @@ class ExpenseRepository implements ExpenseRepositoryInterface
         return $expense;
     }
 
+    public function updateByReference(string $reference, array $data): Expense
+    {
+        $expense = $this->findByReference($reference);
+        $expense->update($data);
+        return $expense;
+    }
+
     public function delete(int $id): bool
     {
         return $this->model->destroy($id) > 0;
+    }
+
+    public function deleteByReference(string $reference): bool
+    {
+        $expense = $this->findByReference($reference);
+        if (!$expense) {
+            return false;
+        }
+        return $this->model->destroy($expense->id) > 0;
     }
 
     public function getByUserId(int $userId): Collection
