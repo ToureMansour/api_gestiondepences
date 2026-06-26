@@ -26,18 +26,18 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::middleware('role:admin')->group(function () {
         Route::get('/users', [UserController::class, 'index']);
-        Route::get('/users/{id}', [UserController::class, 'show']);
+        Route::get('/users/{userReference}', [UserController::class, 'show'])->middleware('uuid:userReference');
     });
     
     // Expense routes
     Route::get('/expenses', [ExpenseController::class, 'index']);
     Route::post('/expenses', [ExpenseController::class, 'store']);
-    Route::get('/expenses/{id}', [ExpenseController::class, 'show']);
-    Route::put('/expenses/{id}', [ExpenseController::class, 'update']);
-    Route::delete('/expenses/{id}', [ExpenseController::class, 'destroy']);
+    Route::get('/expenses/{expenseReference}', [ExpenseController::class, 'show'])->middleware('uuid:expenseReference');
+    Route::put('/expenses/{expenseReference}', [ExpenseController::class, 'update'])->middleware('uuid:expenseReference');
+    Route::delete('/expenses/{expenseReference}', [ExpenseController::class, 'destroy'])->middleware('uuid:expenseReference');
     
     // Admin expense actions
-    Route::middleware('role:admin')->prefix('expenses/{id}')->group(function () {
+    Route::middleware('role:admin')->prefix('expenses/{expenseReference}')->middleware('uuid:expenseReference')->group(function () {
         Route::post('/approve', [AdminExpenseController::class, 'approve']);
         Route::post('/reject', [AdminExpenseController::class, 'reject']);
         Route::post('/pay', [AdminExpenseController::class, 'pay']);
