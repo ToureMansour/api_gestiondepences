@@ -9,9 +9,12 @@ use Illuminate\Database\Eloquent\Collection;
 interface ExpenseRepositoryInterface
 {
     public function findById(int $id): ?Expense;
+    public function findByReference(string $reference): ?Expense;
     public function create(array $data): Expense;
     public function update(int $id, array $data): Expense;
+    public function updateByReference(string $reference, array $data): Expense;
     public function delete(int $id): bool;
+    public function deleteByReference(string $reference): bool;
     public function getByUserId(int $userId): Collection;
     public function getByUserIdPaginated(int $userId, int $perPage = 10): LengthAwarePaginator;
     public function getAllPaginated(int $perPage = 10): LengthAwarePaginator;
