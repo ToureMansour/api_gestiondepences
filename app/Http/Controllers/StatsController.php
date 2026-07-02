@@ -13,7 +13,6 @@ class StatsController extends Controller
     public function __construct(StatsService $statsService)
     {
         $this->statsService = $statsService;
-        $this->middleware('auth:sanctum');
     }
 
     public function index(Request $request): JsonResponse

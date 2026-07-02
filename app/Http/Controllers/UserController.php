@@ -16,8 +16,6 @@ class UserController extends Controller
     {
         $this->userRepository = $userRepository;
         $this->loggingService = $loggingService;
-        $this->middleware('auth:sanctum');
-        $this->middleware('role:admin')->except(['profile', 'updateProfile']);
     }
 
     public function index(): JsonResponse

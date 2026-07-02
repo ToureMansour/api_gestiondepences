@@ -16,8 +16,6 @@ class AdminExpenseController extends Controller
     {
         $this->expenseService = $expenseService;
         $this->loggingService = $loggingService;
-        $this->middleware('auth:sanctum');
-        $this->middleware('role:admin');
     }
 
     public function approve(string $expenseReference): JsonResponse

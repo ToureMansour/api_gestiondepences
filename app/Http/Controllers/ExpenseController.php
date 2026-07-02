@@ -16,7 +16,6 @@ class ExpenseController extends Controller
     {
         $this->expenseService = $expenseService;
         $this->loggingService = $loggingService;
-        $this->middleware('auth:sanctum');
     }
 
     public function index(Request $request): JsonResponse
