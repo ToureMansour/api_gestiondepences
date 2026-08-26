@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Interfaces\AuthRepositoryInterface;
+use App\Mail\ResetPasswordMail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 
 class AuthService
 {
@@ -52,5 +54,53 @@ class AuthService
     public function logout(): void
     {
         Auth::user()->currentAccessToken()->delete();
+    }
+
+    public function changePassword(int $userId, string $currentPassword, string $newPassword): void
+    {
+        $user = Auth::user();
+
+        if (!Hash::check($currentPassword, $user->password)) {
+            throw new \InvalidArgumentException('Le mot de passe actuel est incorrect');
+        }
+
+        $this->authRepository->updatePassword($userId, Hash::make($newPassword));
+    }
+
+    public function forgotPassword(string $email): void
+    {
+        $user = $this->authRepository->findByEmail($email);
+
+        if (!$user) {
+            return;
+        }
+
+        $token = \Illuminate\Support\Str::random(64);
+
+        $this->authRepository->saveResetToken($email, Hash::make($token));
+
+        Mail::to($email)->send(new ResetPasswordMail($token, $email));
+    }
+
+    public function resetPassword(string $email, string $token, string $password): void
+    {
+        $reset = $this->authRepository->getResetToken($email);
+
+        if (!$reset || !Hash::check($token, $reset->token)) {
+            throw new \InvalidArgumentException('Token de reinitialisation invalide');
+        }
+
+        if (now()->diffInMinutes($reset->created_at) > 60) {
+            $this->authRepository->deleteResetToken($email);
+            throw new \InvalidArgumentException('Token de reinitialisation expire');
+        }
+
+        $user = $this->authRepository->findByEmail($email);
+        if (!$user) {
+            throw new \InvalidArgumentException('Utilisateur introuvable');
+        }
+
+        $this->authRepository->updatePassword($user->id, Hash::make($password));
+        $this->authRepository->deleteResetToken($email);
     }
 }

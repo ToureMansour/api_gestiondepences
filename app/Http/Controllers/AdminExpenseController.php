@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\ExpenseService;
 use App\Services\LoggingService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -11,11 +12,13 @@ class AdminExpenseController extends Controller
 {
     protected ExpenseService $expenseService;
     protected LoggingService $loggingService;
+    protected NotificationService $notificationService;
 
-    public function __construct(ExpenseService $expenseService, LoggingService $loggingService)
+    public function __construct(ExpenseService $expenseService, LoggingService $loggingService, NotificationService $notificationService)
     {
         $this->expenseService = $expenseService;
         $this->loggingService = $loggingService;
+        $this->notificationService = $notificationService;
     }
 
     public function approve(string $expenseReference): JsonResponse
@@ -23,6 +26,7 @@ class AdminExpenseController extends Controller
         try {
             $result = $this->expenseService->approveExpense($expenseReference);
             $this->loggingService->logAction('approve', 'expense', $expenseReference, auth()->id());
+            $this->notificationService->onExpenseApproved($result['expense']);
 
             return response()->json([
                 'success' => true,
@@ -54,6 +58,7 @@ class AdminExpenseController extends Controller
         try {
             $result = $this->expenseService->rejectExpense($expenseReference, $request->reason);
             $this->loggingService->logAction('reject', 'expense', $expenseReference, auth()->id(), ['reason' => $request->reason]);
+            $this->notificationService->onExpenseRejected($result['expense'], $request->reason);
 
             return response()->json([
                 'success' => true,
@@ -87,6 +92,7 @@ class AdminExpenseController extends Controller
         try {
             $result = $this->expenseService->markAsPaid($expenseReference, $request->all());
             $this->loggingService->logAction('pay', 'expense', $expenseReference, auth()->id(), ['payment_method' => $request->payment_method]);
+            $this->notificationService->onExpensePaid($result['expense']);
 
             return response()->json([
                 'success' => true,

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\ExpenseService;
 use App\Services\LoggingService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -11,11 +12,13 @@ class ExpenseController extends Controller
 {
     protected ExpenseService $expenseService;
     protected LoggingService $loggingService;
+    protected NotificationService $notificationService;
 
-    public function __construct(ExpenseService $expenseService, LoggingService $loggingService)
+    public function __construct(ExpenseService $expenseService, LoggingService $loggingService, NotificationService $notificationService)
     {
         $this->expenseService = $expenseService;
         $this->loggingService = $loggingService;
+        $this->notificationService = $notificationService;
     }
 
     public function index(Request $request): JsonResponse
@@ -61,6 +64,7 @@ class ExpenseController extends Controller
                 auth()->id()
             );
             $this->loggingService->logAction('create', 'expense', $result['expense']->reference, auth()->id());
+            $this->notificationService->onExpenseCreated($result['expense']);
 
             return response()->json([
                 'success' => true,

@@ -16,6 +16,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'uuid' => \App\Http\Middleware\ValidateUuid::class,
         ]);
+
+        $middleware->redirectGuestsTo(function () {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated'
+            ], 401);
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
