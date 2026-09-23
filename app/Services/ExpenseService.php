@@ -40,7 +40,7 @@ class ExpenseService
         $expense = $this->expenseRepository->create($expenseData);
 
         return [
-            'expense' => $expense->load('user'),
+            'expense' => $expense->load(['user', 'category']),
             'message' => 'Expense created successfully',
         ];
     }
@@ -66,7 +66,7 @@ class ExpenseService
         $updatedExpense = $this->expenseRepository->updateByReference($expenseReference, $data);
 
         return [
-            'expense' => $updatedExpense->load('user'),
+            'expense' => $updatedExpense->load(['user', 'category']),
             'message' => 'Expense updated successfully',
         ];
     }
@@ -92,7 +92,7 @@ class ExpenseService
         ]);
 
         return [
-            'expense' => $updatedExpense->load('user'),
+            'expense' => $updatedExpense->load(['user', 'category']),
             'message' => 'Expense cancelled successfully',
         ];
     }
@@ -114,7 +114,7 @@ class ExpenseService
         ]);
 
         return [
-            'expense' => $updatedExpense->load('user'),
+            'expense' => $updatedExpense->load(['user', 'category']),
             'message' => 'Expense approved successfully',
         ];
     }
@@ -141,12 +141,12 @@ class ExpenseService
         ]);
 
         return [
-            'expense' => $updatedExpense->load('user'),
+            'expense' => $updatedExpense->load(['user', 'category']),
             'message' => 'Expense rejected successfully',
         ];
     }
 
-    public function markAsPaid(string $expenseReference, array $paymentData): array
+    public function markAsPaid(string $expenseReference, array $paymentData, ?UploadedFile $paymentProof = null): array
     {
         $expense = $this->expenseRepository->findByReference($expenseReference);
         
@@ -160,15 +160,22 @@ class ExpenseService
 
         $this->validatePaymentData($paymentData);
 
+        if (!$paymentProof) {
+            throw new \InvalidArgumentException('Payment proof is required');
+        }
+
+        $paymentProofPath = $this->storePaymentProofFile($paymentProof);
+
         $updatedExpense = $this->expenseRepository->updateByReference($expenseReference, [
             'status' => 'PAID',
             'payment_method' => $paymentData['payment_method'],
             'payment_reference' => $paymentData['reference'] ?? null,
+            'payment_proof_path' => $paymentProofPath,
             'paid_at' => $paymentData['paid_at'] ?? now(),
         ]);
 
         return [
-            'expense' => $updatedExpense->load('user'),
+            'expense' => $updatedExpense->load(['user', 'category']),
             'message' => 'Expense marked as paid successfully',
         ];
     }
@@ -241,8 +248,15 @@ class ExpenseService
 
     private function storeProofFile(UploadedFile $file): string
     {
-        $filename = 'expenses/' . uniqid() . '_' . time() . '.' . $file->getClientOriginalExtension();
+        $filename = uniqid() . '_' . time() . '.' . $file->getClientOriginalExtension();
         
-        return $file->storeAs('public', $filename);
+        return $file->storeAs('expenses', $filename, 'public');
+    }
+
+    private function storePaymentProofFile(UploadedFile $file): string
+    {
+        $filename = uniqid() . '_' . time() . '.' . $file->getClientOriginalExtension();
+        
+        return $file->storeAs('payments', $filename, 'public');
     }
 }

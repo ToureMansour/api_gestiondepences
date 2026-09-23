@@ -85,12 +85,13 @@ class AdminExpenseController extends Controller
     {
         $request->validate([
             'payment_method' => 'required|in:cash,mobile_money,transfer',
+            'payment_proof' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
             'reference' => 'nullable|string|max:255',
             'paid_at' => 'nullable|date',
         ]);
 
         try {
-            $result = $this->expenseService->markAsPaid($expenseReference, $request->all());
+            $result = $this->expenseService->markAsPaid($expenseReference, $request->all(), $request->file('payment_proof'));
             $this->loggingService->logAction('pay', 'expense', $expenseReference, auth()->id(), ['payment_method' => $request->payment_method]);
             $this->notificationService->onExpensePaid($result['expense']);
 

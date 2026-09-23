@@ -19,12 +19,12 @@ class ExpenseRepository implements ExpenseRepositoryInterface
 
     public function findById(int $id): ?Expense
     {
-        return $this->model->with('user')->find($id);
+        return $this->model->with(['user', 'category'])->find($id);
     }
 
     public function findByReference(string $reference): ?Expense
     {
-        return $this->model->with('user')->where('reference', $reference)->first();
+        return $this->model->with(['user', 'category'])->where('reference', $reference)->first();
     }
 
     public function create(array $data): Expense
@@ -67,33 +67,34 @@ class ExpenseRepository implements ExpenseRepositoryInterface
 
     public function getByUserIdPaginated(int $userId, int $perPage = 10): LengthAwarePaginator
     {
-        return $this->model->where('user_id', $userId)
+        return $this->model->with(['user', 'category'])
+            ->where('user_id', $userId)
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
 
     public function getAllPaginated(int $perPage = 10): LengthAwarePaginator
     {
-        return $this->model->with('user')
+        return $this->model->with(['user', 'category'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
 
     public function getAll(): Collection
     {
-        return $this->model->with('user')->get();
+        return $this->model->with(['user', 'category'])->get();
     }
 
     public function getByStatus(string $status): Collection
     {
         return $this->model->where('status', $status)
-            ->with('user')
+            ->with(['user', 'category'])
             ->get();
     }
 
     public function filter(array $filters): LengthAwarePaginator
     {
-        $query = $this->model->with('user');
+        $query = $this->model->with(['user', 'category']);
 
         if (isset($filters['status'])) {
             $query->where('status', $filters['status']);

@@ -31,6 +31,7 @@ class Expense extends Model
         'rejection_reason',
         'payment_method',
         'payment_reference',
+        'payment_proof_path',
         'paid_at',
         'expense_date',
         'reference',
@@ -106,5 +107,10 @@ class Expense extends Model
     public function getProofUrlAttribute(): string
     {
         return asset('storage/' . $this->proof_file_path);
+    }
+
+    public function getPaymentProofUrlAttribute(): string
+    {
+        return $this->payment_proof_path ? asset('storage/' . $this->payment_proof_path) : null;
     }
 }

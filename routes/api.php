@@ -33,7 +33,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Users (admin)
     Route::middleware('role:admin')->group(function () {
         Route::get('/users', [UserController::class, 'index']);
+        Route::post('/users', [UserController::class, 'store']);
         Route::get('/users/{userReference}', [UserController::class, 'show'])->middleware('uuid:userReference');
+        Route::put('/users/{userReference}', [UserController::class, 'update'])->middleware('uuid:userReference');
+        Route::delete('/users/{userReference}', [UserController::class, 'destroy'])->middleware('uuid:userReference');
     });
 
     // Expense routes
@@ -55,11 +58,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Categories
     Route::get('/categories', [CategoryController::class, 'index']);
-    Route::middleware('role:admin')->group(function () {
-        Route::post('/categories', [CategoryController::class, 'store']);
-        Route::put('/categories/{id}', [CategoryController::class, 'update']);
-        Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
-    });
+    Route::post('/categories', [CategoryController::class, 'store']);
+    Route::put('/categories/{id}', [CategoryController::class, 'update']);
+    Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
 
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index']);
@@ -69,6 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Settings (admin)
     Route::middleware('role:admin')->group(function () {
         Route::get('/settings', [SettingsController::class, 'index']);
+        Route::post('/settings', [SettingsController::class, 'update']);
         Route::put('/settings', [SettingsController::class, 'update']);
     });
 });
