@@ -20,6 +20,7 @@ class ExpenseFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
+            'reference' => (string) \Illuminate\Support\Str::uuid(),
             'title' => fake()->randomElement([
                 'Transport - Uber',
                 'Restaurant - Lunch',
