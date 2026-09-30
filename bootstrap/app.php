@@ -17,13 +17,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'uuid' => \App\Http\Middleware\ValidateUuid::class,
         ]);
 
-        $middleware->redirectGuestsTo(function () {
+        $middleware->redirectGuestsTo('/login');
+    })
+    ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, \Illuminate\Http\Request $request) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthenticated'
             ], 401);
         });
-    })
-    ->withExceptions(function (Exceptions $exceptions): void {
-        //
     })->create();

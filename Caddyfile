@@ -1,0 +1,10 @@
+{
+    auto_https off
+}
+
+:{$PORT:8080} {
+    root * /app/public
+    encode zstd br gzip
+    header X-Content-Type-Options nosniff
+    php_server
+}
